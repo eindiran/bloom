@@ -9,6 +9,115 @@ extern crate fasthash;
 use bit_vec::BitVec;
 use fasthash::murmur3;
 
+
+/// BloomFilter struct:
+///    * Bit array
+///    * Length of bit array
+///    * Hash count
+///    * False positive rate
+///    * Expected inserts
+///    * Actual inserts
+pub struct BloomFilter {
+    bit_arr: BitVec,
+    len: u64,
+    hash_count: u64,
+    false_positive_rate: f64,
+    expected_inserts: u64,
+    actual_inserts: u64
+}
+
+/// Implementation of a standard bloom filter, using a bit array.
+impl BloomFilter {
+
+    /// Getter for hash_count
+    pub fn get_hash_count(&self) -> u64 {
+        return self.hash_count;
+    }
+
+    /// Getter for false_positive_rate
+    pub fn get_false_positive_rate(&self) -> f64 {
+        return self.false_positive_rate;
+    }
+
+    /// Getter for expected_inserts
+    pub fn get_expected_inserts(&self) -> u64 {
+        return self.expected_inserts;
+    }
+
+    /// Getter for actual_inserts
+    pub fn get_actual_inserts(&self) -> u64 {
+        return self.actual_inserts;
+    }
+
+    /// Given a desired false positive rate, calculate the length of the BitVec required
+    /// See 'm' in this SO answer: https://stackoverflow.com/a/22467497
+    /// m = ceil(-n*ln(p) / (ln(2)^2))
+    fn calculate_len(expected_inserts: f64, false_positive_rate: f64) -> u64 {
+        let two: f64 = 2.0;
+        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil() as u64;
+    }
+
+    /// Calculate the number of hashes required
+    /// See 'k' in this SO answer: https://stackoverflow.com/a/22467497
+    /// k = ceil(m/n * ln(2))
+    fn calculate_hash_count(expected_inserts: f64, len: u64) -> u64 {
+        let two: f64 = 2.0;
+        return (((len as f64) / expected_inserts) * two.ln()).ceil() as u64;
+    }
+
+    /// Return a single usize value, representing an index to be marked or checked
+    fn get_hash_index(i: u32, item: &str, len: u64) -> usize {
+        let digest_val: u128 = murmur3::hash128_with_seed(item, i);  // Compute a murmur3 seeded hash
+        let bit_index: u64 = digest_val as u64 % len;                // Mod the len of the BitVec
+        return bit_index as usize;
+    }
+
+    /// Create a new BloomFilter
+    pub fn new(expected_inserts: u64, false_positive_rate: f64) -> BloomFilter {
+        if false_positive_rate <= 0.0 {
+            panic!("False positive rate must be a positive number. Currently: {}", false_positive_rate);
+        } else if expected_inserts < 1 {
+            panic!("Expected number of inserts must be a positive number. Currently: {}", expected_inserts);
+        }
+
+        let len: u64 = BloomFilter::calculate_len(expected_inserts as f64, false_positive_rate);
+        let hash_count: u64 = BloomFilter::calculate_hash_count(expected_inserts as f64, len);
+
+        BloomFilter {
+            bit_arr: BitVec::from_elem(len as usize, false), // Create the whole BitVec zeroed-out
+            len: len,
+            hash_count: hash_count,
+            false_positive_rate: false_positive_rate,
+            expected_inserts: expected_inserts,
+            actual_inserts: 0
+        }
+    }
+
+    /// Insert a new element into the BloomFilter
+    pub fn insert(&mut self, item: &str) {
+        for i in 0..self.hash_count {
+            let bit_index: usize = BloomFilter::get_hash_index(i as u32, item, self.len);
+            self.bit_arr.set(bit_index, true); // Set the relevant index to '1'
+        }
+        self.actual_inserts += 1;
+    }
+
+    /// Check whether an element is probably in the filter or not
+    pub fn check(&self, item: &str) -> bool {
+        for i in 0..self.hash_count {
+            let bit_index: usize = BloomFilter::get_hash_index(i as u32, item, self.len);
+            // Check if the relevant index is set
+            if !self.bit_arr[bit_index as usize] {
+                return false;
+            }
+        }
+        // If all values checked matched then the item is
+        // likely in the BloomFilter
+        return true;
+    }
+}
+
+
 /// CountingBloomFilter struct
 ///    * Counter vec
 ///    * Length of counter array
@@ -132,113 +241,6 @@ impl CountingBloomFilter {
     }
 }
 
-
-/// BloomFilter struct:
-///    * Bit array
-///    * Length of bit array
-///    * Hash count
-///    * False positive rate
-///    * Expected inserts
-///    * Actual inserts
-pub struct BloomFilter {
-    bit_arr: BitVec,
-    len: u64,
-    hash_count: u64,
-    false_positive_rate: f64,
-    expected_inserts: u64,
-    actual_inserts: u64
-}
-
-/// Implementation of a standard bloom filter, using a bit array.
-impl BloomFilter {
-
-    /// Getter for hash_count
-    pub fn get_hash_count(&self) -> u64 {
-        return self.hash_count;
-    }
-
-    /// Getter for false_positive_rate
-    pub fn get_false_positive_rate(&self) -> f64 {
-        return self.false_positive_rate;
-    }
-
-    /// Getter for expected_inserts
-    pub fn get_expected_inserts(&self) -> u64 {
-        return self.expected_inserts;
-    }
-
-    /// Getter for actual_inserts
-    pub fn get_actual_inserts(&self) -> u64 {
-        return self.actual_inserts;
-    }
-
-    /// Given a desired false positive rate, calculate the length of the BitVec required
-    /// See 'm' in this SO answer: https://stackoverflow.com/a/22467497
-    /// m = ceil(-n*ln(p) / (ln(2)^2))
-    fn calculate_len(expected_inserts: f64, false_positive_rate: f64) -> u64 {
-        let two: f64 = 2.0;
-        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil() as u64;
-    }
-
-    /// Calculate the number of hashes required
-    /// See 'k' in this SO answer: https://stackoverflow.com/a/22467497
-    /// k = ceil(m/n * ln(2))
-    fn calculate_hash_count(expected_inserts: f64, len: u64) -> u64 {
-        let two: f64 = 2.0;
-        return (((len as f64) / expected_inserts) * two.ln()).ceil() as u64;
-    }
-
-    /// Return a single usize value, representing an index to be marked or checked
-    fn get_hash_index(i: u32, item: &str, len: u64) -> usize {
-        let digest_val: u128 = murmur3::hash128_with_seed(item, i);  // Compute a murmur3 seeded hash
-        let bit_index: u64 = digest_val as u64 % len;                // Mod the len of the BitVec
-        return bit_index as usize;
-    }
-
-    /// Create a new BloomFilter
-    pub fn new(expected_inserts: u64, false_positive_rate: f64) -> BloomFilter {
-        if false_positive_rate <= 0.0 {
-            panic!("False positive rate must be a positive number. Currently: {}", false_positive_rate);
-        } else if expected_inserts < 1 {
-            panic!("Expected number of inserts must be a positive number. Currently: {}", expected_inserts);
-        }
-
-        let len: u64 = BloomFilter::calculate_len(expected_inserts as f64, false_positive_rate);
-        let hash_count: u64 = BloomFilter::calculate_hash_count(expected_inserts as f64, len);
-
-        BloomFilter {
-            bit_arr: BitVec::from_elem(len as usize, false), // Create the whole BitVec zeroed-out
-            len: len,
-            hash_count: hash_count,
-            false_positive_rate: false_positive_rate,
-            expected_inserts: expected_inserts,
-            actual_inserts: 0
-        }
-    }
-
-    /// Insert a new element into the BloomFilter
-    pub fn insert(&mut self, item: &str) {
-        for i in 0..self.hash_count {
-            let bit_index: usize = BloomFilter::get_hash_index(i as u32, item, self.len);
-            self.bit_arr.set(bit_index, true); // Set the relevant index to '1'
-        }
-        self.actual_inserts += 1;
-    }
-
-    /// Check whether an element is probably in the filter or not
-    pub fn check(&self, item: &str) -> bool {
-        for i in 0..self.hash_count {
-            let bit_index: usize = BloomFilter::get_hash_index(i as u32, item, self.len);
-            // Check if the relevant index is set
-            if !self.bit_arr[bit_index as usize] {
-                return false;
-            }
-        }
-        // If all values checked matched then the item is
-        // likely in the BloomFilter
-        return true;
-    }
-}
 
 #[cfg(test)]
 mod tests {
