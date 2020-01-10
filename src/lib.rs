@@ -6,7 +6,6 @@
 use bit_vec::BitVec;
 use fasthash::murmur3;
 
-
 /// BloomFilter struct:
 ///    * Bit array
 ///    * Length of bit array
@@ -20,12 +19,11 @@ pub struct BloomFilter {
     hash_count: u64,
     false_positive_rate: f64,
     expected_inserts: u64,
-    actual_inserts: u64
+    actual_inserts: u64,
 }
 
 /// Implementation of a standard bloom filter, using a bit array.
 impl BloomFilter {
-
     /// Getter for hash_count
     pub fn get_hash_count(&self) -> u64 {
         return self.hash_count;
@@ -51,7 +49,8 @@ impl BloomFilter {
     /// m = ceil(-n*ln(p) / (ln(2)^2))
     fn calculate_len(expected_inserts: f64, false_positive_rate: f64) -> u64 {
         let two: f64 = 2.0;
-        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil() as u64;
+        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil()
+            as u64;
     }
 
     /// Calculate the number of hashes required
@@ -64,17 +63,23 @@ impl BloomFilter {
 
     /// Return a single usize value, representing an index to be marked or checked
     fn get_hash_index(i: u32, item: &str, len: u64) -> usize {
-        let digest_val: u128 = murmur3::hash128_with_seed(item, i);  // Compute a murmur3 seeded hash
-        let bit_index: u64 = digest_val as u64 % len;                // Mod the len of the BitVec
+        let digest_val: u128 = murmur3::hash128_with_seed(item, i); // Compute a murmur3 seeded hash
+        let bit_index: u64 = digest_val as u64 % len;               // Mod the len of the BitVec
         return bit_index as usize;
     }
 
     /// Create a new BloomFilter
     pub fn new(expected_inserts: u64, false_positive_rate: f64) -> BloomFilter {
         if false_positive_rate <= 0.0 {
-            panic!("False positive rate must be a positive number. Currently: {}", false_positive_rate);
+            panic!(
+                "False positive rate must be a positive number. Currently: {}",
+                false_positive_rate
+            );
         } else if expected_inserts < 1 {
-            panic!("Expected number of inserts must be a positive number. Currently: {}", expected_inserts);
+            panic!(
+                "Expected number of inserts must be a positive number. Currently: {}",
+                expected_inserts
+            );
         }
 
         let len: u64 = BloomFilter::calculate_len(expected_inserts as f64, false_positive_rate);
@@ -86,7 +91,7 @@ impl BloomFilter {
             hash_count: hash_count,
             false_positive_rate: false_positive_rate,
             expected_inserts: expected_inserts,
-            actual_inserts: 0
+            actual_inserts: 0,
         }
     }
 
@@ -114,7 +119,6 @@ impl BloomFilter {
     }
 }
 
-
 /// CountingBloomFilter struct
 ///    * Counter vec
 ///    * Length of counter array
@@ -128,12 +132,11 @@ pub struct CountingBloomFilter {
     hash_count: u64,
     false_positive_rate: f64,
     expected_inserts: u64,
-    actual_inserts: u64
+    actual_inserts: u64,
 }
 
 /// Implementation of a counting bloom filter. Uses a Vec<u64> to hold the counters
 impl CountingBloomFilter {
-
     /// Getter for hash_count
     pub fn get_hash_count(&self) -> u64 {
         return self.hash_count;
@@ -159,7 +162,8 @@ impl CountingBloomFilter {
     /// m = ceil(-n*ln(p) / (ln(2)^2))
     fn calculate_len(expected_inserts: f64, false_positive_rate: f64) -> u64 {
         let two: f64 = 2.0;
-        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil() as u64;
+        return ((-1.0 * (expected_inserts) * false_positive_rate.ln()) / two.ln().powf(two)).ceil()
+            as u64;
     }
 
     /// Calculate the number of hashes required
@@ -172,21 +176,29 @@ impl CountingBloomFilter {
 
     /// Return a single usize value, representing an index to be marked or checked
     fn get_hash_index(i: u32, item: &str, len: u64) -> usize {
-        let digest_val: u128 = murmur3::hash128_with_seed(item, i);  // Compute a murmur3 seeded hash
-        let counter_index: u64 = digest_val as u64 % len;            // Mod the len of the counter vec
+        let digest_val: u128 = murmur3::hash128_with_seed(item, i); // Compute a murmur3 seeded hash
+        let counter_index: u64 = digest_val as u64 % len;           // Mod the len of the counter vec
         return counter_index as usize;
     }
 
     /// Create a new CountingBloomFilter
     pub fn new(expected_inserts: u64, false_positive_rate: f64) -> CountingBloomFilter {
         if false_positive_rate <= 0.0 {
-            panic!("False positive rate must be a positive number. Currently: {}", false_positive_rate);
+            panic!(
+                "False positive rate must be a positive number. Currently: {}",
+                false_positive_rate
+            );
         } else if expected_inserts < 1 {
-            panic!("Expected number of inserts must be a positive number. Currently: {}", expected_inserts);
+            panic!(
+                "Expected number of inserts must be a positive number. Currently: {}",
+                expected_inserts
+            );
         }
 
-        let len: u64 = CountingBloomFilter::calculate_len(expected_inserts as f64, false_positive_rate);
-        let hash_count: u64 = CountingBloomFilter::calculate_hash_count(expected_inserts as f64, len);
+        let len: u64 =
+            CountingBloomFilter::calculate_len(expected_inserts as f64, false_positive_rate);
+        let hash_count: u64 =
+            CountingBloomFilter::calculate_hash_count(expected_inserts as f64, len);
 
         CountingBloomFilter {
             counters: vec![0; len as usize],
@@ -194,14 +206,15 @@ impl CountingBloomFilter {
             hash_count: hash_count,
             false_positive_rate: false_positive_rate,
             expected_inserts: expected_inserts,
-            actual_inserts: 0
+            actual_inserts: 0,
         }
     }
 
     /// Insert a new element into the CountingBloomFilter
     pub fn insert(&mut self, item: &str) {
         for i in 0..self.hash_count {
-            let counter_index: usize = CountingBloomFilter::get_hash_index(i as u32, item, self.len);
+            let counter_index: usize =
+                CountingBloomFilter::get_hash_index(i as u32, item, self.len);
             let counter = &mut self.counters[counter_index];
             *counter += 1; // Increment the relevant index by 1
         }
@@ -211,7 +224,8 @@ impl CountingBloomFilter {
     /// Check whether an element is probably in the filter or not
     pub fn check(&self, item: &str) -> bool {
         for i in 0..self.hash_count {
-            let counter_index: usize = CountingBloomFilter::get_hash_index(i as u32, item, self.len);
+            let counter_index: usize =
+                CountingBloomFilter::get_hash_index(i as u32, item, self.len);
             // Check if the relevant index is set
             if self.counters[counter_index as usize] < 1 {
                 return false;
@@ -228,7 +242,8 @@ impl CountingBloomFilter {
             return;
         }
         for i in 0..self.hash_count {
-            let counter_index: usize = CountingBloomFilter::get_hash_index(i as u32, item, self.len);
+            let counter_index: usize =
+                CountingBloomFilter::get_hash_index(i as u32, item, self.len);
             let counter = &mut self.counters[counter_index];
             *counter -= 1; // Decrement by 1
             if *counter == u64::max_value() {
@@ -237,7 +252,6 @@ impl CountingBloomFilter {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -260,15 +274,15 @@ mod tests {
         #[test]
         /// Test that we can insert a string into a BloomFilter
         fn test_insert() {
-            let s = "This is a test string";    // Inserted
-            let s2 = "This is another string";  // Inserted
-            let s3 = "This is a third string";  // Not inserted
+            let s = "This is a test string";   // Inserted
+            let s2 = "This is another string"; // Inserted
+            let s3 = "This is a third string"; // Not inserted
             let mut bf: BloomFilter = BloomFilter::new(2, 0.05);
             bf.insert(&s);
             bf.insert(&s2);
-            assert!(bf.check(&s));    // Included
-            assert!(bf.check(&s2));   // Included
-            assert!(!bf.check(&s3));  // Not included
+            assert!(bf.check(&s));   // Included
+            assert!(bf.check(&s2));  // Included
+            assert!(!bf.check(&s3)); // Not included
         }
 
         #[test]
@@ -386,15 +400,15 @@ mod tests {
         #[test]
         /// Test that we can insert a string into a CountingBloomFilter
         fn test_insert() {
-            let s = "This is a test string";    // Inserted
-            let s2 = "This is another string";  // Inserted
-            let s3 = "This is a third string";  // Not inserted
+            let s = "This is a test string";   // Inserted
+            let s2 = "This is another string"; // Inserted
+            let s3 = "This is a third string"; // Not inserted
             let mut bf: CountingBloomFilter = CountingBloomFilter::new(2, 0.05);
             bf.insert(&s);
             bf.insert(&s2);
-            assert!(bf.check(&s));    // Included
-            assert!(bf.check(&s2));   // Included
-            assert!(!bf.check(&s3));  // Not included
+            assert!(bf.check(&s));   // Included
+            assert!(bf.check(&s2));  // Included
+            assert!(!bf.check(&s3)); // Not included
         }
 
         #[test]
