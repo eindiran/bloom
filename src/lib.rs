@@ -3,9 +3,6 @@
  *
  * Implements a Murmur3-based Bloom Filter and Counting Bloom Filter.
  */
-extern crate bit_vec;
-extern crate fasthash;
-
 use bit_vec::BitVec;
 use fasthash::murmur3;
 
