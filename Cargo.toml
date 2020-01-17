@@ -2,7 +2,7 @@
 name = "bloom"
 version = "0.1.0"
 authors = ["eindiran <eindiran@uchicago.edu>"]
-edition = "2020"
+edition = "2018"
 
 [dependencies]
 bit-vec = "0.6"
