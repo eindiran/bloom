@@ -5,7 +5,7 @@
  * reasonably performant and the expected behavior is seen wrt to false
  * positive rate.
  */
-use bloom::bloom::CountingBloomFilter as CountingBloomFilter;
+use bloom::bloom::CountingBloomFilter;
 
 #[test]
 /// Test that the getter for hash_count is visible from outside the crate

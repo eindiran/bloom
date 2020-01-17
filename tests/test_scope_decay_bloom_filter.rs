@@ -4,7 +4,7 @@
  * Test that the murmur3 implementation of a Scope Decay Bloom Filter is reasonably performant
  * and the expected behavior is seen wrt to false positive rate.
  */
-use bloom::bloom::ScopeDecayBloomFilter as ScopeDecayBloomFilter;
+use bloom::bloom::ScopeDecayBloomFilter;
 
 #[test]
 /// Test that the getter for hash_count is visible from outside the crate

@@ -164,7 +164,6 @@ impl ScopeDecayBloomFilter {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

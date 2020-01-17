@@ -7,5 +7,4 @@
  *      ScopeDecayBloomFilter -- a scope decay bloom filter, supporting gradual resetting of bits
  *                               over time.
  */
-
-pub mod bloom;  // Export the module defined in bloom.rs
+pub mod bloom; // Export the module defined in bloom.rs
