@@ -5,8 +5,10 @@
  */
 pub use self::bloom_filter::BloomFilter;
 pub use self::counting_bloom_filter::CountingBloomFilter;
+pub use self::generational_bloom_filter::GenerationalBloomFilter;
 pub use self::scope_decay_bloom_filter::ScopeDecayBloomFilter;
 
 mod bloom_filter;
 mod counting_bloom_filter;
+mod generational_bloom_filter;
 mod scope_decay_bloom_filter;
