@@ -139,6 +139,13 @@ impl CountingBloomFilter {
             }
         }
     }
+
+    /// Empty out the CountingBloomFilter: reset the counter vec so that it is zeroed-out
+    /// and set actual_inserts to 0
+    pub fn empty(&mut self) {
+        self.counters = vec![0; self.len as usize];
+        self.actual_inserts = 0;
+    }
 }
 
 #[cfg(test)]
@@ -196,16 +203,49 @@ mod tests {
         for i in 1..100 {
             bf.insert(&i.to_string());
         }
-        for g in 1..100 {
-            assert!(bf.check(&g.to_string()));
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
         }
         let mut false_positives: u64 = 0;
-        for h in 101..200 {
-            if bf.check(&h.to_string()) {
+        for k in 101..200 {
+            if bf.check(&k.to_string()) {
                 false_positives += 1;
             }
         }
         assert!(false_positives < 6); // Slightly more than 5%
+    }
+
+    #[test]
+    /// Test that delete behaves like we expect
+    fn test_delete() {
+        let mut bf: CountingBloomFilter = CountingBloomFilter::new(100, 0.05);
+        for i in 1..100 {
+            bf.insert(&i.to_string());
+        }
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
+        }
+        // Now delete an item
+        bf.delete(&1.to_string());
+        // It shouldn't be present any longer
+        assert!(!bf.check(&1.to_string()));
+    }
+
+    #[test]
+    /// Test that the empty method empties out the counter Vec
+    fn test_empty() {
+        let mut bf: CountingBloomFilter = CountingBloomFilter::new(100, 0.05);
+        for i in 1..100 {
+            bf.insert(&i.to_string());
+        }
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
+        }
+        // Empty out the CountingBloomFilter
+        bf.empty();
+        for k in 1..100 {
+            assert!(!bf.check(&k.to_string()));
+        }
     }
 
     #[test]

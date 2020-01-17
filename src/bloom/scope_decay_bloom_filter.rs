@@ -162,6 +162,12 @@ impl ScopeDecayBloomFilter {
             self.decay_nbits(nbits as u64);
         }
     }
+
+    /// Emtpy out the ScopeDecayBloomFilter
+    pub fn empty(&mut self) {
+        self.bit_arr.clear();
+        self.actual_inserts = 0;
+    }
 }
 
 #[cfg(test)]
@@ -219,12 +225,12 @@ mod tests {
         for i in 1..100 {
             bf.insert(&i.to_string());
         }
-        for g in 1..100 {
-            assert!(bf.check(&g.to_string()));
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
         }
         let mut false_positives: u64 = 0;
-        for h in 101..200 {
-            if bf.check(&h.to_string()) {
+        for k in 101..200 {
+            if bf.check(&k.to_string()) {
                 false_positives += 1;
             }
         }
@@ -241,6 +247,22 @@ mod tests {
         let old_count = bf.bit_arr.iter().filter(|x| *x).count();
         bf.decay();
         assert!(old_count > bf.bit_arr.iter().filter(|x| *x).count());
+    }
+
+    #[test]
+    /// Test that empty behaves like we expect
+    fn test_empty() {
+        let mut bf: ScopeDecayBloomFilter = ScopeDecayBloomFilter::new(100, 0.05, 0.1);
+        for i in 1..100 {
+            bf.insert(&i.to_string());
+        }
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
+        }
+        bf.empty();
+        for k in 1..100 {
+            assert!(!bf.check(&k.to_string()));
+        }
     }
 
     #[test]

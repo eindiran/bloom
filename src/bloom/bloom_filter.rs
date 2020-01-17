@@ -117,6 +117,12 @@ impl BloomFilter {
         }
         return true;
     }
+
+    /// Empty out the BloomFilter
+    pub fn empty(&mut self) {
+        self.bit_arr.clear();
+        self.actual_inserts = 0;
+    }
 }
 
 #[cfg(test)]
@@ -174,16 +180,32 @@ mod tests {
         for i in 1..100 {
             bf.insert(&i.to_string());
         }
-        for g in 1..100 {
-            assert!(bf.check(&g.to_string()));
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
         }
         let mut false_positives: u64 = 0;
-        for h in 101..200 {
-            if bf.check(&h.to_string()) {
+        for k in 101..200 {
+            if bf.check(&k.to_string()) {
                 false_positives += 1;
             }
         }
         assert!(false_positives < 6); // Slightly more than 5%
+    }
+
+    #[test]
+    /// Test that we can empty out the BloomFilter
+    fn test_empty() {
+        let mut bf: BloomFilter = BloomFilter::new(100, 0.05);
+        for i in 1..100 {
+            bf.insert(&i.to_string());
+        }
+        for j in 1..100 {
+            assert!(bf.check(&j.to_string()));
+        }
+        bf.empty();
+        for k in 1..100 {
+            assert!(!bf.check(&k.to_string()));
+        }
     }
 
     #[test]
