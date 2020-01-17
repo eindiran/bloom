@@ -1,8 +1,7 @@
 /**
  * test_scope_decay_bloom_filter.rs
  *
- * Test that the murmur3 implementation of a Scope Decay Bloom Filter is reasonably performant
- * and the expected behavior is seen wrt to false positive rate.
+ * Integration tests for ScopeDecayBloomFilter.
  */
 use bloom::bloom::ScopeDecayBloomFilter;
 

@@ -1,4 +1,4 @@
-/**
+/*!
  * lib.rs
  *
  * Implements a Murmur3-based bloom filter variations:

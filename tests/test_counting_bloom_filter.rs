@@ -1,9 +1,7 @@
 /**
  * test_counting_bloom_filter.rs
  *
- * Test that the murmur3 implementation of a Counting Bloom Filter is
- * reasonably performant and the expected behavior is seen wrt to false
- * positive rate.
+ * Integration tests for CountingBloomFilter.
  */
 use bloom::bloom::CountingBloomFilter;
 

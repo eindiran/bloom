@@ -1,4 +1,4 @@
-/**
+/*!
  * bloom_filter.rs
  *
  * Implements a Murmur3-based generic bloom filter:

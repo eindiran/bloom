@@ -1,4 +1,4 @@
-/**
+/*!
  * bloom.rs
  *
  * Collates the various bloom filter types into a single Rust module.

@@ -1,8 +1,7 @@
 /**
  * test_bloom_filter.rs
  *
- * Test that the murmur3 implementation of a Bloom Filter is reasonably performant
- * and the expected behavior is seen wrt to false positive rate.
+ * Integration tests for BloomFilter.
  */
 use bloom::bloom::BloomFilter;
 

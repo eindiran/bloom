@@ -1,4 +1,4 @@
-/**
+/*!
  * generational_bloom_filter.rs
  *
  * Implements a Murmur3-based generational bloom filter:

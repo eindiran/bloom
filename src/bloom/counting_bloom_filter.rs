@@ -1,4 +1,4 @@
-/**
+/*!
  * counting_bloom_filter.rs
  *
  * Implements a Murmur3-based counting bloom filter:
