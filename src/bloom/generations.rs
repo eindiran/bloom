@@ -13,5 +13,15 @@ pub enum GenerationValues {
     B,
 }
 
+impl GenerationValues {
+    /// Return the generation name as a string
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            GenerationValues::A => "A",
+            GenerationValues::B => "B",
+        }
+    }
+}
+
 /// Type alias for GenerationValues
 pub type Generation = GenerationValues;
