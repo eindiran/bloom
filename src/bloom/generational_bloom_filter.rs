@@ -9,8 +9,8 @@
  *                                  generations in use at any moment.
  *                                  Does ~not~ support manual deletion.
  */
-use std::collections::VecDeque;
 use crate::bloom::BloomFilter;
+use std::collections::VecDeque;
 
 /// GenerationalBloomFilter struct:
 ///    * generations:         VecDeque containing each generation's BloomFilter
@@ -74,8 +74,13 @@ impl GenerationalBloomFilter {
 
     /// Initialize generations VecDeque, by placing num_generations
     /// empty BloomFilters into the deque
-    pub fn init_generations(expected_inserts: u64, false_positive_rate: f64, num_generations: u64) -> VecDeque<BloomFilter> {
-        let mut generations: VecDeque<BloomFilter> = VecDeque::with_capacity(num_generations as usize);
+    pub fn init_generations(
+        expected_inserts: u64,
+        false_positive_rate: f64,
+        num_generations: u64,
+    ) -> VecDeque<BloomFilter> {
+        let mut generations: VecDeque<BloomFilter> =
+            VecDeque::with_capacity(num_generations as usize);
         for _ in 0..num_generations {
             generations.push_back(BloomFilter::new(expected_inserts, false_positive_rate));
         }
@@ -83,7 +88,11 @@ impl GenerationalBloomFilter {
     }
 
     /// Create a new GenerationalBloomFilter
-    pub fn new(expected_inserts: u64, false_positive_rate: f64, num_generations: u64) -> GenerationalBloomFilter {
+    pub fn new(
+        expected_inserts: u64,
+        false_positive_rate: f64,
+        num_generations: u64,
+    ) -> GenerationalBloomFilter {
         if false_positive_rate <= 0.0 {
             panic!(
                 "False positive rate must be a positive number. Currently: {}",
@@ -94,6 +103,11 @@ impl GenerationalBloomFilter {
                 "Expected number of inserts must be a positive number. Currently: {}",
                 expected_inserts
             );
+        } else if num_generations < 2 {
+            panic!(
+                "Expected number of generations must be a positive integer >= 2. Currently: {}",
+                num_generations
+            );
         }
 
         let len: u64 =
@@ -102,7 +116,11 @@ impl GenerationalBloomFilter {
             GenerationalBloomFilter::calculate_hash_count(expected_inserts as f64, len);
 
         GenerationalBloomFilter {
-            generations: GenerationalBloomFilter::init_generations(expected_inserts, false_positive_rate, num_generations),
+            generations: GenerationalBloomFilter::init_generations(
+                expected_inserts,
+                false_positive_rate,
+                num_generations,
+            ),
             num_generations: num_generations,
             hash_count: hash_count,
             false_positive_rate: false_positive_rate,
@@ -115,7 +133,10 @@ impl GenerationalBloomFilter {
     /// for the new active generation
     fn recycle(&mut self) {
         self.generations.pop_front();
-        self.generations.push_back(BloomFilter::new(self.expected_inserts, self.false_positive_rate));
+        self.generations.push_back(BloomFilter::new(
+            self.expected_inserts,
+            self.false_positive_rate,
+        ));
     }
 
     /// Insert a new element into the current generation BloomFilter
@@ -127,7 +148,7 @@ impl GenerationalBloomFilter {
         }
         match self.generations.front_mut() {
             Some(bf) => bf.insert(item), // The compiler will do the dereference for us
-            None     => panic!("VecDeque 'generations' is uninitialized!")
+            None => panic!("VecDeque 'generations' is uninitialized!"),
         }
         self.actual_inserts += 1;
     }
@@ -146,7 +167,7 @@ impl GenerationalBloomFilter {
     pub fn check_current(&self, item: &str) -> bool {
         match self.generations.back() {
             Some(bf) => bf.check(item),
-            None     => panic!("VecDeque 'generations' is uninitialized!")
+            None => panic!("VecDeque 'generations' is uninitialized!"),
         }
     }
 
@@ -158,7 +179,6 @@ impl GenerationalBloomFilter {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,7 +187,7 @@ mod tests {
     /// Test that we can create a new GenerationalBloomFilter using GenerationalBloomFilter::new()
     /// and that all getters work and return the expected values
     fn test_new() {
-        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(3, 0.05);
+        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(3, 0.05, 3);
         assert_eq!(bf.get_expected_inserts(), 3);
         assert_eq!(bf.get_actual_inserts(), 0);
         assert_eq!(bf.get_false_positive_rate(), 0.05);
@@ -180,7 +200,7 @@ mod tests {
         let s = "This is a test string"; // Inserted
         let s2 = "This is another string"; // Inserted
         let s3 = "This is a third string"; // Not inserted
-        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(2, 0.05);
+        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(2, 0.05, 3);
         bf.insert(&s);
         bf.insert(&s2);
         assert!(bf.check(&s)); // Included
@@ -191,7 +211,7 @@ mod tests {
     #[test]
     /// Test that the actual_inserts counter works as expected
     fn test_count_actual_inserts() {
-        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(100, 0.05);
+        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(100, 0.05, 3);
         assert_eq!(bf.get_actual_inserts(), 0);
         for i in 1..100 {
             bf.insert(&i.to_string());
@@ -202,7 +222,7 @@ mod tests {
     #[test]
     /// Test that check behaves like we expect
     fn test_check() {
-        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(100, 0.05);
+        let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(100, 0.05, 3);
         for i in 1..100 {
             bf.insert(&i.to_string());
         }
@@ -258,7 +278,7 @@ mod tests {
     /// Because expected_inserts is u64, the negative case is free
     fn test_invalid_inserts() {
         #[allow(unused_variables)]
-        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(0, 0.001);
+        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(0, 0.001, 3);
     }
 
     #[test]
@@ -266,7 +286,7 @@ mod tests {
     /// Test that we can't pass 0% as the desired false positive rate
     fn test_invalid_fpr_zero() {
         #[allow(unused_variables)]
-        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, 0.0);
+        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, 0.0, 3);
     }
 
     #[test]
@@ -274,7 +294,14 @@ mod tests {
     /// Test that we can't pass a negative percentage as the desired false positive rate
     fn test_invalid_fpr_negative() {
         #[allow(unused_variables)]
-        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, -0.03);
+        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, -0.03, 3);
+    }
+
+    #[test]
+    #[should_panic]
+    /// Test that GBF::new will panic if num_generations < 2
+    fn test_invalid_num_generations() {
+        #[allow(unused_variables)]
+        let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, 0.05, 1);
     }
 }
-*/

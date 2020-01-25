@@ -61,29 +61,3 @@ fn test_false_positive_rate() {
     }
     assert!((false_positives as f64) < (90000.0 * 0.011));
 }
-
-/*#[test]
-/// A end-to-end test with a forced recycle
-fn test_e2e() {
-    let mut bf: GenerationalBloomFilter = GenerationalBloomFilter::new(100, 0.001);
-    // Fill 'er up
-    for i in 0..199 {
-        bf.insert(&i.to_string());
-    }
-    // Make sure all of our entries are still present
-    for j in 0..199 {
-        assert!(bf.check(&j.to_string()));
-    }
-    // Continue adding new entries to force a recycle/generational turn over
-    for k in 200..300 {
-        bf.insert(&k.to_string());
-    }
-    // Now check on 0..100, which should have been recycled
-    let mut false_positives: u64 = 0;
-    for l in 0..100 {
-        if bf.check(&l.to_string()) {
-            false_positives += 1;
-        }
-    }
-    assert!(false_positives <= 1);
-}*/
