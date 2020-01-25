@@ -123,6 +123,12 @@ impl BloomFilter {
         self.bit_arr.clear();
         self.actual_inserts = 0;
     }
+
+    /// Set bit pattern of bit_arr BitVec to a particular byte array
+    /// Useful for debugging and some special cases
+    pub fn set_bits(&mut self, bytes: &[u8]) {
+        self.bit_arr = BitVec::from_bytes(&bytes);
+    }
 }
 
 #[cfg(test)]

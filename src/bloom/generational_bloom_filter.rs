@@ -2,37 +2,26 @@
  * generational_bloom_filter.rs
  *
  * Implements a Murmur3-based generational bloom filter:
- *      GenerationalBloomFilter  -- a generational bloom filter, which is essentially 2 bloom filters
- *                                  used together to provide alternating "generations". The older
- *                                  generation is recycled when the newer generation becomes full,
- *                                  in a pattern similar to Blue-Green deployment.
+ *      GenerationalBloomFilter  -- a generational bloom filter, which is essentially n bloom filters
+ *                                  used together to provide alternating "generations". The oldest
+ *                                  generation is recycled when the newest generation becomes full,
+ *                                  in a pattern similar to Blue-Green deployment, but with n
+ *                                  generations in use at any moment.
  *                                  Does ~not~ support manual deletion.
  */
+use std::collections::VecDeque;
 use crate::bloom::BloomFilter;
 
-/// Create an enum to control which generation of bloom filter
-/// is the active or current generation.
-#[derive(PartialEq, Debug)]
-enum GenerationValues {
-    A,
-    B,
-}
-
-/// Type alias for the generation values
-type Generation = GenerationValues;
-
 /// GenerationalBloomFilter struct:
-///    * generation_a:        A single generation's BloomFilter, owned ptr
-///    * generation_b:        A single generation's BloomFilter, owned ptr
-///    * current_gen:         Annotate which generation is the current generation for inserts
+///    * generations:         VecDeque containing each generation's BloomFilter
+///    * num_generations:     Number of generations (length of VecDeque)
 ///    * hash_count:          Hash count
 ///    * false_positive_rate: False positive rate
 ///    * expected_inserts:    Expected inserts per generation
 ///    * actual_inserts:      Actual inserts, for the current generation
 pub struct GenerationalBloomFilter {
-    generation_a: BloomFilter,
-    generation_b: BloomFilter,
-    current_gen: Generation,
+    generations: VecDeque<BloomFilter>,
+    num_generations: u64,
     hash_count: u64,
     false_positive_rate: f64,
     expected_inserts: u64,
@@ -41,6 +30,11 @@ pub struct GenerationalBloomFilter {
 
 /// Implementation of a generational bloom filter
 impl GenerationalBloomFilter {
+    /// Getter for num_generations
+    pub fn get_num_generations(&self) -> u64 {
+        return self.num_generations;
+    }
+
     /// Getter for hash_count
     pub fn get_hash_count(&self) -> u64 {
         return self.hash_count;
@@ -78,8 +72,18 @@ impl GenerationalBloomFilter {
         return (((len as f64) / expected_inserts) * two.ln()).ceil() as u64;
     }
 
-    /// Create a new BloomFilter
-    pub fn new(expected_inserts: u64, false_positive_rate: f64) -> GenerationalBloomFilter {
+    /// Initialize generations VecDeque, by placing num_generations
+    /// empty BloomFilters into the deque
+    pub fn init_generations(expected_inserts: u64, false_positive_rate: f64, num_generations: u64) -> VecDeque<BloomFilter> {
+        let mut generations: VecDeque<BloomFilter> = VecDeque::with_capacity(num_generations as usize);
+        for _ in 0..num_generations {
+            generations.push_back(BloomFilter::new(expected_inserts, false_positive_rate));
+        }
+        return generations;
+    }
+
+    /// Create a new GenerationalBloomFilter
+    pub fn new(expected_inserts: u64, false_positive_rate: f64, num_generations: u64) -> GenerationalBloomFilter {
         if false_positive_rate <= 0.0 {
             panic!(
                 "False positive rate must be a positive number. Currently: {}",
@@ -98,9 +102,8 @@ impl GenerationalBloomFilter {
             GenerationalBloomFilter::calculate_hash_count(expected_inserts as f64, len);
 
         GenerationalBloomFilter {
-            generation_a: BloomFilter::new(expected_inserts, false_positive_rate),
-            generation_b: BloomFilter::new(expected_inserts, false_positive_rate),
-            current_gen: Generation::A,
+            generations: GenerationalBloomFilter::init_generations(expected_inserts, false_positive_rate, num_generations),
+            num_generations: num_generations,
             hash_count: hash_count,
             false_positive_rate: false_positive_rate,
             expected_inserts: expected_inserts,
@@ -108,54 +111,54 @@ impl GenerationalBloomFilter {
         }
     }
 
-    /// Recycle & switch the current/active generation
+    /// Recycle the oldest generation, creating a new BloomFilter
+    /// for the new active generation
     fn recycle(&mut self) {
-        if self.current_gen == Generation::A {
-            self.generation_b.empty();
-            self.current_gen = Generation::B;
-        } else if self.current_gen == Generation::B {
-            self.generation_a.empty();
-            self.current_gen = Generation::A;
-        } else {
-            panic!(
-                "Encountered illegal value for current_gen: {:?}",
-                self.current_gen
-            );
-        }
+        self.generations.pop_front();
+        self.generations.push_back(BloomFilter::new(self.expected_inserts, self.false_positive_rate));
     }
 
     /// Insert a new element into the current generation BloomFilter
     pub fn insert(&mut self, item: &str) {
         if self.actual_inserts + 1 > self.expected_inserts {
-            // Recycle the previous generation
+            // Recycle the oldest generation
             self.recycle();
             self.actual_inserts = 0;
         }
-        if self.current_gen == Generation::A {
-            self.generation_a.insert(item);
-        } else if self.current_gen == Generation::B {
-            self.generation_b.insert(item);
-        } else {
-            panic!(
-                "Encountered illegal value for current_gen: {:?}",
-                self.current_gen
-            );
+        match self.generations.front_mut() {
+            Some(bf) => bf.insert(item), // The compiler will do the dereference for us
+            None     => panic!("VecDeque 'generations' is uninitialized!")
         }
         self.actual_inserts += 1;
     }
 
-    /// Check whether an element is probably in the filter or not
+    /// Check whether an element matches any generation of the BloomFilter
     pub fn check(&self, item: &str) -> bool {
-        return self.generation_a.check(item) || self.generation_b.check(item);
+        for bf in self.generations.iter() {
+            if bf.check(item) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    /// Empty out the entire data structure (ie both generations)
+    /// Check whether an element matches the current generation of the BloomFilter
+    pub fn check_current(&self, item: &str) -> bool {
+        match self.generations.back() {
+            Some(bf) => bf.check(item),
+            None     => panic!("VecDeque 'generations' is uninitialized!")
+        }
+    }
+
+    /// Empty out the entire data structure (ie all generations)
     pub fn empty(&mut self) {
-        self.recycle();
-        self.recycle();
+        for g in self.generations.iter_mut() {
+            g.empty();
+        }
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,3 +277,4 @@ mod tests {
         let bf: GenerationalBloomFilter = GenerationalBloomFilter::new(1, -0.03);
     }
 }
+*/
